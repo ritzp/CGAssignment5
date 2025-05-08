@@ -10,4 +10,4 @@ The main function is in EmptyViewer/sphere_scene.cpp file.
 If you want to close the project window, input 'Q' to close the OpenGL Viewer window and input any key to close the command window.
 <br>
 <h3>Result Screenshot</h3>
-<img src="https://github.com/user-attachments/assets/ebfbfc7f-7e58-433e-9ca6-8d504779dc6c">
+<img src="https://github.com/user-attachments/assets/e486ac8d-b7fa-448b-9f21-8e1ed34f23ce">
