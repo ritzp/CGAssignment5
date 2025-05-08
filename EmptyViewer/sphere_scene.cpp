@@ -15,7 +15,13 @@ const int WIDTH = 512;
 const int HEIGHT = 512;
 
 struct Vertex {
+public:
     float x, y, z, w = 1.0f;
+};
+
+struct Vector3 {
+public:
+    float x, y, z;
 };
 
 int gNumVertices;
@@ -35,29 +41,44 @@ Vertex multiply(const float matrix[4][4], const Vertex& v) {
     return result;
 }
 
-Vertex createModelingTransform(Vertex v, float sx, float sy, float sz, float tx, float ty, float tz) {
-    float model[4][4] = { {sx, 0, 0, tx}, {0, sy, 0, ty}, {0, 0, sz, tz}, {0, 0, 0, 1} };
-    return multiply(model, v);
-}
-
-Vertex createCameraTransform(Vertex v) {
-    float camera[4][4] = { {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1} };
-    return multiply(camera, v);
-}
-
-Vertex createProjectionTransform(Vertex v, float l, float r, float t, float b, float n, float f) {
-    float projection[4][4] = {
-        {2 * n / (r - l), 0, (r + l) / (r - l), 0},
-        {0, 2 * n / (t - b), (t + b) / (t - b), 0},
-        {0, 0, -(f + n) / (f - n), -(2 * f * n) / (f - n)},
-        {0, 0, -1, 0}
+Vertex modelingTransform(Vertex _v, float sx, float sy, float sz, float tx, float ty, float tz) {
+    float mm[4][4] = {
+        {sx, 0, 0, tx},
+        {0, sy, 0, ty},
+        {0, 0, sz, tz},
+        { 0, 0, 0, 1 }
     };
-    v = multiply(projection, v);
-    if (v.w != 0) { v.x /= v.w; v.y /= v.w; v.z /= v.w; }
-    return v;
+    return multiply(mm, _v);
 }
 
-Vertex createViewportTransform(Vertex v, float width, float height) {
+Vertex cameraTransform(Vertex _v, Vector3 u, Vector3 v, Vector3 w, Vector3 e) {
+    float mc[4][4] = {
+        {u.x, v.x, w.x, e.x},
+        {u.y, v.y, w.y, e.y},
+        {u.z, v.z, w.z, e.z},
+        {0, 0, 0, 1}
+    };
+    return multiply(mc, _v);
+}
+
+Vertex projectionTransform(Vertex _v, float l, float r, float t, float b, float n, float f) {
+    float mp[4][4] = {
+        {2 * n / (r - l), 0, (l + r) / (l - r), 0},
+        {0, 2 * n / (t - b), (b + t) / (b - t), 0},
+        {0, 0, (f + n) / (n - f), (2 * f * n) / (f - n)},
+        {0, 0, 1, 0}
+    };
+    _v = multiply(mp, _v);
+    if (_v.w != 0) {
+        _v.x /= _v.w;
+        _v.y /= _v.w;
+        _v.z /= _v.w;
+        _v.w = 1.0f;
+    }
+    return _v;
+}
+
+Vertex viewportTransform(Vertex v, float width, float height) {
     v.x = (v.x + 1) * width * 0.5f;
     v.y = (v.y + 1) * height * 0.5f;
     return v;
@@ -76,22 +97,27 @@ void transform_and_rasterize() {
         Vertex v1 = gVertices[idx1];
         Vertex v2 = gVertices[idx2];
 
+        Vector3 u = { 1, 0, 0 };
+        Vector3 v = { 0, 1, 0 };
+        Vector3 w = { 0, 0, 1 };
+        Vector3 e = { 0, 0, 0 };
+
         // Transform
-        v0 = createModelingTransform(v0, 2, 2, 2, 0, 0, -7);
-        v1 = createModelingTransform(v1, 2, 2, 2, 0, 0, -7);
-        v2 = createModelingTransform(v2, 2, 2, 2, 0, 0, -7);
+        v0 = modelingTransform(v0, 2, 2, 2, 0, 0, -7);
+        v1 = modelingTransform(v1, 2, 2, 2, 0, 0, -7);
+        v2 = modelingTransform(v2, 2, 2, 2, 0, 0, -7);
 
-        v0 = createCameraTransform(v0);
-        v1 = createCameraTransform(v1);
-        v2 = createCameraTransform(v2);
+        v0 = cameraTransform(v0, u, v, w, e);
+        v1 = cameraTransform(v1, u, v, w, e);
+        v2 = cameraTransform(v2, u, v, w, e);
 
-        v0 = createProjectionTransform(v0, -1, 1, 1, -1, 1, 10);
-        v1 = createProjectionTransform(v1, -1, 1, 1, -1, 1, 10);
-        v2 = createProjectionTransform(v2, -1, 1, 1, -1, 1, 10);
+        v0 = projectionTransform(v0, -0.1, 0.1, 0.1, -0.1, -0.1, -1000);
+        v1 = projectionTransform(v1, -0.1, 0.1, 0.1, -0.1, -0.1, -1000);
+        v2 = projectionTransform(v2, -0.1, 0.1, 0.1, -0.1, -0.1, -1000);
 
-        v0 = createViewportTransform(v0, WIDTH, HEIGHT);
-        v1 = createViewportTransform(v1, WIDTH, HEIGHT);
-        v2 = createViewportTransform(v2, WIDTH, HEIGHT);
+        v0 = viewportTransform(v0, WIDTH, HEIGHT);
+        v1 = viewportTransform(v1, WIDTH, HEIGHT);
+        v2 = viewportTransform(v2, WIDTH, HEIGHT);
 
         // Rasterization
         int minX = (int)floorf(fmin(fmin(v0.x, v1.x), v2.x));
