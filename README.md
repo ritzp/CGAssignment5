@@ -1,6 +1,6 @@
 # CGAssignment5
 
-The main function is in EmptyViewer/sphere_scene.cpp file.
+The main function is in Assignemt5/sphere_scene.cpp file.
 
 <h3>How to Build and Run</h3>
 1. Open OpenglViewer.sln<br>
